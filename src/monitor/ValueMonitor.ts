@@ -81,6 +81,10 @@ export class TotalValueMonitor extends AbstractMonitor<TotalValue> {
           .filter(defined)
           .join("/");
 
+        const dbData = await this.context.db.getRepository(Token);
+
+        console.log(dbData);
+
         console.log(
           `Supply of ${path}: ${pair.supply} ${tradableToken?.symbol}`
         );

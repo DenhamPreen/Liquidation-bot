@@ -37,12 +37,62 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   }
 
   async liquidateUnhealthy() {
-    let unhealthy = await this.repository.find("health", { $eq: amount(0) });
+    const liquidationMargin = 0.054;
+    const liquidationReward = 0.024;
 
+    // price, numberOfTokens, collateralValue, liquidationMargin, liquidationReward
+    let shouldLiquidate: boolean = AggressiveLiquidatorOnPreviousPrice(
+      1, //price
+      1, // number of tokens
+      1, // collateral value
+      liquidationMargin,
+      liquidationReward,
+      1, // loanValue
+      "0x" // pair address
+    );
+
+    console.log("shouldLiquidate");
+    console.log(shouldLiquidate);
+
+    // let unhealthy = await this.repository.find("health", { $eq: amount(0) });
+
+    let unhealthy = await this.repository.find("health", {
+      $gt: amount(0), // TODO: revert to 1_000_000_000
+    });
+
+    // let unhealthy = await this.repository.find("trader", {
+    //   $eq: "0xea53f634bd4bb113ee55ea679f7825d2a0dfd4a8", // TODO: revert to 1_000_000_000
+    // });
+
+    console.log("/////////////");
+    console.log("unhealthy.length");
+    console.log(unhealthy.length);
     // console.log(unhealthy);
 
+    // for demo
+    // unhealthy = [
+    //   { price: 10, amount: 10, collateralValue: 10, value: 10, pair: "0x" },
+    // ];
+
+    // unhealthy = [unhealthy[0]];
+
+    // unhealthy = unhealthy.filter((p) => {
+    //   AggressiveLiquidatorOnPreviousPrice(
+    //     10, //price // TODO
+    //     p.amount, // number of tokens
+    //     10, // collateral value // TODO
+    //     liquidationMargin,
+    //     liquidationReward,
+    //     p.value, // loanValue
+    //     p.pair // pair address
+    //   );
+    //   return true;
+    // });
+
+    console.log("unhealthy.post filter");
+    console.log(unhealthy.length);
+
     unhealthy = unhealthy.filter((p) => {
-      p.amount.gt(amount(0));
       console.log("///////////////////////////////");
       console.log("lendable: ", p.lendable);
       console.log("tradable: ", p.tradable);
@@ -66,12 +116,14 @@ export class PositionMonitor extends AbstractMonitor<Position> {
       console.log("currentCost: ", p.currentCost.toString());
       console.log("liquidationCost: ", p.liquidationCost.toString());
       console.log("short: ", p.short);
+      return p.amount.gt(amount(0));
     });
     unhealthy = await Promise.all(unhealthy.map((p) => this.updatePosition(p)));
 
-    for (let p of unhealthy.filter((p) => {
-      p.amount.gt(amount(0));
-    })) {
+    // for (let p of unhealthy.filter((p) => {
+    //   p.amount.gt(amount(0));
+    // })) {
+    for (let p of unhealthy) {
       const { path, tradableToken } = await p.getPath(this.context.db);
 
       let amount = p.amount
@@ -86,20 +138,26 @@ export class PositionMonitor extends AbstractMonitor<Position> {
           `health: ${p.health.decimalPlaces(27).dividedBy(oneRay)}`
       );
 
-      await protocol.IPair__factory.connect(p.pair, this.context.signer)
-        .liquidatePosition(p.trader, this.context.signer.address)
-        .then((tx) => tx.wait())
-        .catch((e) =>
-          addException("pair", p.pair, e, {
-            message: `Failed liquidate position of ${path} ${p.trader} ${e.message}`,
-          })
-        )
-        .then((v) => {
-          if (defined(v)) {
-            // If call was successful
-            this.context.metrics.increment("liquidations", ["successful"]);
-          }
-        });
+      var defaultOptions = { gasPrice: 1000000000, gasLimit: 1000000 }; // TODO: simply up gas price to bnb network
+
+      // await protocol.IPair__factory.connect(p.pair, this.context.signer)
+      //   .liquidatePosition(
+      //     p.trader,
+      //     this.context.signer.address,
+      //     defaultOptions
+      //   )
+      //   .then((tx) => tx.wait())
+      //   .catch((e) =>
+      //     addException("pair", p.pair, e, {
+      //       message: `Failed liquidate position of ${path} ${p.trader} ${e.message}`,
+      //     })
+      //   )
+      //   .then((v) => {
+      //     if (defined(v)) {
+      //       // If call was successful
+      //       this.context.metrics.increment("liquidations", ["successful"]);
+      //     }
+      //   });
     }
   }
 
@@ -225,6 +283,8 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   }
 
   async updatePosition(position: Position) {
+    // console.log(position);
+
     if (position.amount.eq(bn(0)) && position.appearAt < position.updateAt) {
       position.lastUpdatedAt = Date.now();
 
@@ -308,7 +368,7 @@ export class PositionMonitor extends AbstractMonitor<Position> {
       position.pair,
       `Update ${position.short ? "short" : "long"} position:  ${path} ${
         position.trader
-      } (heath: ${position.health
+      } (health: ${position.health
         .decimalPlaces(27)
         .dividedBy(oneRay)}, value: ${position.value
         .decimalPlaces(18)
@@ -330,6 +390,9 @@ export class PositionMonitor extends AbstractMonitor<Position> {
     const covalentHolders = await this.requestCovalentHolders(pair).catch(
       (_) => []
     );
+
+    console.log("covalentHolders");
+    console.log(covalentHolders);
 
     // request holders from api, if present return them and skip rest of this method
     if (covalentHolders.length > 0) {
@@ -417,11 +480,14 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   private async requestCovalentHolders(
     pair: Pair
   ): Promise<Array<{ address: string }>> {
+    console.log("make covalent holders req");
+
     // If key is blank or chain is not supported, use other methods
     if (
       this.context.covalentApiKey.length === 0 ||
       ![1, 56, 137, 43114].includes(this.context.chainId)
     ) {
+      console.log("this");
       return [];
     }
 
@@ -437,7 +503,11 @@ export class PositionMonitor extends AbstractMonitor<Position> {
             },
           }
         )
-        .then((r) => r.data.data.items)
+        .then((r) => {
+          console.log("r.data.data.items");
+          console.log(r.data.data.items);
+          return r.data.data.items;
+        })
     );
   }
 

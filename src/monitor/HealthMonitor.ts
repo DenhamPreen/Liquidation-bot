@@ -32,6 +32,9 @@ export class HealthMonitor extends AbstractMonitor<boolean> {
 
     let pairs = await this.pairs.all();
 
+    // console.log("pairs");
+    // console.log(pairs);
+
     let positions = await this.positions.all();
     const pairsWithTokens = await Promise.all(
       pairs.map(async (pair) => ({
@@ -149,6 +152,9 @@ export class HealthMonitor extends AbstractMonitor<boolean> {
     let positions = await this.positions.all();
     positions = positions.filter((p) => p.amount.gt(amount(0)));
 
+    // console.log("positions");
+    // console.log(positions);
+
     positions.forEach((pos) => {
       this.context.metrics.update("pos_health", {
         [[pos.pair, pos.trader].join("_").toLowerCase()]: pos.health.eq(0)
@@ -180,7 +186,8 @@ export class HealthMonitor extends AbstractMonitor<boolean> {
         .concat(not_updated_positions)
         .map((p) => this.formatPosition(p))
     );
-    formatted.forEach((pos) => console.log(`HealthMonitor: ${pos}`));
+    // formatted.forEach((pos) => console.log(`HealthMonitor: ${pos}`));
+    // formatted.forEach( void);
 
     while (height === this.lastHeight) {
       await sleep(this.context.loopSleep);

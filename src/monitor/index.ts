@@ -118,7 +118,7 @@ export class ExecutionContext implements InitializeParams {
     });
 
     server.listen(process.env.PORT, async () => {
-      // console.log("Server started");
+      console.log("Server started");
     });
   }
 

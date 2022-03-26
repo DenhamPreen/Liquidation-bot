@@ -6,9 +6,10 @@ const calculateProbabilityOfLiquidationAtNextPriceUpdate = (
   priceMovementThreshold
 ) => {
   // export distribution
-  const normDist = new NormalDistribution(mean, standardDeviation);
+  // const normDist = new NormalDistribution(mean, standardDeviation);
 
-  liquidiationProbability = 1 - normDist.cdf(priceMovementThreshold);
+  // liquidiationProbability = 1 - normDist.cdf(priceMovementThreshold);
+  let liquidiationProbability = 0.1;
 
   return liquidiationProbability;
 };
@@ -18,11 +19,14 @@ export const AggressiveLiquidatorOnPreviousPrice = (
   numberOfTokens,
   collateralValue,
   liquidationMargin,
-  liquidationReward
+  liquidationReward,
+  loanValue,
+  pair
 ) => {
-  let thresholdPassed = loanValue * liquidationReward > minimumRewardThreshold;
+  let { minimumRewardThreshold, degreeOfConfidenceThreshold } =
+    getPairParams(pair);
 
-  let x = getPairParams(pair);
+  let thresholdPassed = loanValue * liquidationReward > minimumRewardThreshold;
 
   let liquidiationPrice =
     (collateralValue / numberOfTokens) * (1 + liquidationMargin);

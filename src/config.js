@@ -6,12 +6,12 @@ const defaultPairParams = {
 const pairParams = {
   "0x": {
     minimumRewardThreshold: 10,
-    degreeOfConfidenceThreshold: 0.9,
+    degreeOfConfidenceThreshold: 0.01,
   },
 };
 
 export const getPairParams = (pair) => {
-  return key in pairParams ? pairParams[pair] : defaultPairParams;
+  return pair in pairParams ? pairParams[pair] : defaultPairParams;
 };
 
 export default { getPairParams };
