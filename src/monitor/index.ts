@@ -11,12 +11,11 @@ import { PositionMonitor } from "./PositionMonitor";
 import { TokenMonitor } from "./TokenMonitor";
 import { TotalValueMonitor } from "./ValueMonitor";
 import { HealthMonitor } from "./HealthMonitor";
-import { Context } from '@wowswap/evm-sdk';
-import { initMetrics, Metrics } from '../utils/metrics';
-import { sdkInit } from '../sdk';
-import cors from 'cors';
-import { healthEndpoint } from '../utils/health';
-
+import { Context } from "@wowswap/evm-sdk";
+import { initMetrics, Metrics } from "../utils/metrics";
+import { sdkInit } from "../sdk";
+import cors from "cors";
+import { healthEndpoint } from "../utils/health";
 
 export type Ctor<T> = new (context: ExecutionContext) => T;
 
@@ -34,7 +33,7 @@ const monitors = [
   PairMonitor,
   PositionMonitor,
   TotalValueMonitor,
-  HealthMonitor
+  HealthMonitor,
 ] as const;
 
 type InstanceType<T> = T extends Ctor<infer TInstance> ? TInstance : never;
@@ -48,19 +47,19 @@ export class ExecutionContext implements InitializeParams {
     return this.params.startBlock;
   }
   get privateKey(): string {
-    return this.params.privateKey
+    return this.params.privateKey;
   }
   get sleepTime(): number {
-    return this.params.sleepTime
+    return this.params.sleepTime;
   }
   get transferEventsLimit(): number {
-    return this.params.transferEventsLimit
+    return this.params.transferEventsLimit;
   }
   get loopSleep(): number {
-    return 250
+    return 250;
   }
   get covalentApiKey(): string {
-    return this.params.covalentApiKey
+    return this.params.covalentApiKey;
   }
 
   monitors: {
@@ -76,19 +75,21 @@ export class ExecutionContext implements InitializeParams {
   db!: DatastoreConnection;
   chainId!: number;
 
-  ctx!: Context
+  ctx!: Context;
 
-  signer!: Wallet
+  signer!: Wallet;
 
-  metrics!: Metrics
+  metrics!: Metrics;
 
   constructor(private params: InitializeParams) {}
 
   async run() {
-    this.ctx = await sdkInit()
-    this.chainId = await this.ctx.provider.getNetwork().then((network) => network.chainId)
-    this.db = connect(`.snapshot/instance-${this.chainId}`)
-    this.signer = new Wallet(this.privateKey, this.ctx.provider)
+    this.ctx = await sdkInit();
+    this.chainId = await this.ctx.provider
+      .getNetwork()
+      .then((network) => network.chainId);
+    this.db = connect(`.snapshot/instance-${this.chainId}`);
+    this.signer = new Wallet(this.privateKey, this.ctx.provider);
 
     this.api();
     this.runMonitor(HeightMonitor);
@@ -103,17 +104,21 @@ export class ExecutionContext implements InitializeParams {
     const app = express();
     const server = http.createServer(app);
     app.get("/", async (req, res, next) => {
-      res.json({ result: "Hello" })
-      next()
+      res.json({ result: "Hello" });
+      next();
     });
 
-    app.use(cors({ origin: '*' }))
-    app.get('/health', healthEndpoint)
+    app.use(cors({ origin: "*" }));
+    app.get("/health", healthEndpoint);
 
-    this.metrics = initMetrics({ express: app, prefix: 'liquidation_bot', defaultLabels: { chainId: this.chainId.toString() } })
+    this.metrics = initMetrics({
+      express: app,
+      prefix: "liquidation_bot",
+      defaultLabels: { chainId: this.chainId.toString() },
+    });
 
     server.listen(process.env.PORT, async () => {
-      console.log("Server started");
+      // console.log("Server started");
     });
   }
 

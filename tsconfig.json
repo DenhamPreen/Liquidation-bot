@@ -8,14 +8,21 @@
     "outDir": "lib",
     "rootDir": "src",
     "removeComments": true,
-    "strict": true,
-    "noUnusedLocals": true,
+    "strict": false,
+    "noUnusedLocals": false,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "experimentalDecorators": true,
-    "inlineSourceMap": true
-  }
+    "inlineSourceMap": true,
+    "checkJs": false,
+    "allowJs": true
+  },
+  "compileOnSave": true,
+  "include": [
+    "src/**/*"    
+  ],
+  "exclude": ["node_modules"]
 }

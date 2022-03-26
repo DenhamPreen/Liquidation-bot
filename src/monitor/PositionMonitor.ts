@@ -11,6 +11,7 @@ import { Pair, Position } from "./models";
 import { healthUpdate } from "../utils/health";
 import axios from "axios";
 import BigNumber from "bignumber.js";
+import { AggressiveLiquidatorOnPreviousPrice } from "../strategy/AggressiveLiquidator.js";
 
 export class PositionMonitor extends AbstractMonitor<Position> {
   private repository!: DatastoreRepository<Position>;
@@ -38,16 +39,39 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   async liquidateUnhealthy() {
     let unhealthy = await this.repository.find("health", { $eq: amount(0) });
 
+    // console.log(unhealthy);
+
     unhealthy = unhealthy.filter((p) => {
       p.amount.gt(amount(0));
-      console.log(p.amount.toString());
+      console.log("///////////////////////////////");
+      console.log("lendable: ", p.lendable);
+      console.log("tradable: ", p.tradable);
+      console.log("proxy: ", p.proxy);
+      console.log("trader: ", p.trader);
+      console.log("pair: ", p.pair);
+      console.log("updateAt: ", p.updateAt);
+      console.log("appearAt: ", p.appearAt);
+      console.log("lastUpdatedAt: ", p.lastUpdatedAt);
+      console.log("Now          : ", Date.now());
+      console.log("expirationDate: ", p.expirationDate.toString());
+      console.log("stopLossPercentage: ", p.stopLossPercentage.toString());
+      console.log("takeProfitPercentage: ", p.takeProfitPercentage.toString());
+      console.log("terminationReward: ", p.terminationReward.toString());
+      console.log("amount: ", p.amount.toString());
+      console.log("value: ", p.value.toString());
+      console.log("selfValue: ", p.selfValue.toString());
+      console.log("principalDebt: ", p.principalDebt.toString());
+      console.log("currentDebt: ", p.currentDebt.toString());
+      console.log("rate: ", p.rate.toString());
+      console.log("currentCost: ", p.currentCost.toString());
+      console.log("liquidationCost: ", p.liquidationCost.toString());
+      console.log("short: ", p.short);
     });
     unhealthy = await Promise.all(unhealthy.map((p) => this.updatePosition(p)));
 
-    // console.log("HERE: ");
-    // console.log(unhealthy);
-
-    for (let p of unhealthy.filter((p) => p.amount.gt(amount(0)))) {
+    for (let p of unhealthy.filter((p) => {
+      p.amount.gt(amount(0));
+    })) {
       const { path, tradableToken } = await p.getPath(this.context.db);
 
       let amount = p.amount
@@ -118,7 +142,7 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   }
 
   private async updatePositions(height: number) {
-    console.log("update positions at height", height);
+    // console.log("update positions at height", height);
 
     const positionToUpdate = await this.repository.all();
     await Promise.all(
@@ -136,7 +160,7 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   }
 
   private async updateHolders(height: number) {
-    console.log("update holders at height", height);
+    // console.log("update holders at height", height);
     const startedAt = Number(new Date());
 
     let positions = await this.repository.all();

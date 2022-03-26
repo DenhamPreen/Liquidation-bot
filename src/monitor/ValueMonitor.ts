@@ -6,7 +6,7 @@ import { HeightMonitor } from "./HeightMonitor";
 import { Pair, Token } from "./models";
 import { PairMonitor } from "./PairMonitor";
 import { TokenMonitor } from "./TokenMonitor";
-import { protocol } from '@wowswap/evm-sdk';
+import { protocol } from "@wowswap/evm-sdk";
 
 export enum LockType {
   Staked,
@@ -66,24 +66,26 @@ export class TotalValueMonitor extends AbstractMonitor<TotalValue> {
 
     await Promise.all(
       pairsWithSupply.map(async (pair) => {
-          const lendableToken = await this.context.db
-            .getRepository(Token)
-            .get(pair.lendable);
-          const tradableToken = await this.context.db
-            .getRepository(Token)
-            .get(pair.tradable);
-          const proxyToken = pair.proxy
-            ? await this.context.db.getRepository(Token).get(pair.proxy)
-            : undefined;
+        const lendableToken = await this.context.db
+          .getRepository(Token)
+          .get(pair.lendable);
+        const tradableToken = await this.context.db
+          .getRepository(Token)
+          .get(pair.tradable);
+        const proxyToken = pair.proxy
+          ? await this.context.db.getRepository(Token).get(pair.proxy)
+          : undefined;
 
-          const path = [lendableToken, proxyToken, tradableToken]
-            .map((t) => t?.symbol)
-            .filter(defined)
-            .join("/");
+        const path = [lendableToken, proxyToken, tradableToken]
+          .map((t) => t?.symbol)
+          .filter(defined)
+          .join("/");
 
-          console.log(`Supply of ${path}: ${pair.supply} ${tradableToken?.symbol}`)
-        }
-      ))
-    // console.log("update value monitor at", height)
+        console.log(
+          `Supply of ${path}: ${pair.supply} ${tradableToken?.symbol}`
+        );
+      })
+    );
+    // // console.log("update value monitor at", height)
   }
 }
