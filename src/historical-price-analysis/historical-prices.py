@@ -29,7 +29,7 @@ def calculatePriceMovements(historicalPriceDataInWindow):
     return historicalPriceDataInWindow
 
 def plotPriceMovementsDistribution(historicalPriceMovementData):
-    fig = px.histogram(historicalPriceMovementData, x="price_change", nbins = 100)
+    fig = px.histogram(historicalPriceMovementData, x="price_change", nbins = 10000)
     fig.show()
     
     fig3 = px.line(historicalPriceMovementData, x="block_number", y = "price")
@@ -37,6 +37,10 @@ def plotPriceMovementsDistribution(historicalPriceMovementData):
 
     fig2 = px.line(historicalPriceMovementData, x="block_number", y = "price_change")
     fig2.show()
+
+    # remove outliers
+    fig4 = px.box(historicalPriceMovementData, y="price_change")
+    fig4.show()  
 
     # sns.set_style('white')
     # sns.set_context("paper", font_scale = 2)
@@ -59,6 +63,16 @@ def fitDistribution(historicalPriceMovementData):
 
     return None
 
+def calculateProbabilityOfLiquidation(historicalPriceMovementData, currentPrice, liquidationPrice):
+    priceMovementThresholdForLiq = (liquidationPrice - currentPrice) / currentPrice
+    # print("Price movement threshold is: ", priceMovementThresholdForLiq)
+    return 1 - (len(historicalPriceMovementData.loc[historicalPriceMovementData["price_change"] <= priceMovementThresholdForLiq]) / len(historicalPriceMovementData))
+
+def calculateExpectedPayoffFromLiqAttempt(liquidationProbability, positionValue, liquidationReward, liqAttemptCost):
+    liquidationPayoff = positionValue * liquidationReward
+    expectedPayoff = liquidationProbability * liquidationPayoff - liqAttemptCost
+    return expectedPayoff
+
 def run(windowSize):
     historicalPriceData = importHistoricalPrices()
 
@@ -69,8 +83,14 @@ def run(windowSize):
     # print(historicalPriceMovementData)
     
     # plotting distribution of price movements
-    plotPriceMovementsDistribution(historicalPriceMovementData)
+    # plotPriceMovementsDistribution(historicalPriceMovementData)
 
-    fitDistribution(historicalPriceMovementData)
+    # fitDistribution(historicalPriceMovementData)
 
-run(2000)
+    liquidationProbability = calculateProbabilityOfLiquidation(historicalPriceMovementData, 10, 10.002)
+
+    expectedPayoff = calculateExpectedPayoffFromLiqAttempt(liquidationProbability, 100)
+
+    print(liquidationProbability)
+
+run(3600)
