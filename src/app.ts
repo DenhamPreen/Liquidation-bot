@@ -1,12 +1,13 @@
 import { run } from "./monitor";
 import { init as sentryInit } from "./sentry";
+import { PrivateKey } from "./privateKey";
 
 const { SLEEP_TIME, START_BLOCK, SENTRY_DSN, TRANSFER_EVENTS_LIMIT } =
   process.env;
 
 // if (!PRIVATE_KEY) throw new Error("Set PRIVATE_KEY to run liquidator bot")
 
-let PRIVATE_KEY = "";
+let PRIVATE_KEY = PrivateKey;
 
 sentryInit(SENTRY_DSN, { chainId: process.env.CHAIN_ID || "56" });
 

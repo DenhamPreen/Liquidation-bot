@@ -11,3 +11,6 @@ lib
 docker-compose.yml
 
 tsconfig.tsbuildinfo
+
+src/privateKey.ts
+src/privateKey.js

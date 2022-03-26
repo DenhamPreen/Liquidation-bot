@@ -10,8 +10,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "start": "node lib/app.js",
-    "dev": "tsc -w src/app.ts",
-    "dev:watch": "ts-node-dev --respawn src/app.ts"
+    "dev": "yarn build && yarn start"    
   },
   "devDependencies": {
     "ts-node": "9.1.1",
