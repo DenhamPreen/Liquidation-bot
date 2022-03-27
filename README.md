@@ -1,4 +1,22 @@
-# Liquidation BOT
+# Statistical Probabilistic Liquidation BOT Executor
+
+We have built a liquidation bot for WOWSwap, that improves the current version in several ways while remaining lightweight for many users to run.
+
+Our predictive algorithm results in the liquidation transaction happening an entire block before the current liquidation bot while remaining profitable.   
+
+Our bot uses a probabilistic liquidation predictor that dynamically examines recent prices' volatility and calculates the probability that the next price will cross the liquidation price. The bot uses this probability to compute an expected reward for any liquidation transaction. To calculate the expected value, the system considers the payoff size using the position size and max reward and considers all costs (gas fees, etc.). If the liquidation transaction's expected value (i.e. profitability) exceeds a threshold, the system submits a transaction.
+
+Our bot is customisable per market so that users can adjust their profitability preferences. Customisability prevents a speed race where all bots fire transactions simultaneously, so the fastest (and most expensive) hardware would win. Instead, users can adjust the parameters to find an edge.
+
+ Our system benefits the broader WOWSwap system as our bot is more reactive to larger positions as these pose a greater risk to liquidity providers if they are slow to liquidate.
+
+###  files of interest
+`AggressiveLiquidator.js`
+`config.js` - Allows for customizing the parameters of the strategy to cater to liquidatoooors
+`PositionMonitors.ts` 
+`AmmPriceData.ts`
+
+# Liquidation BOT Base
 
 Liquidates or Terminates positions when conditions for liquidation/termination are met. 
 
