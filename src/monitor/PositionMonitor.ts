@@ -59,13 +59,16 @@ export class PositionMonitor extends AbstractMonitor<Position> {
       console.log("trader: ", p.trader.toLowerCase());
       console.log("pair: ", p.pair.toLowerCase());
 
+      // price, collateralValue, liquidationMargin, liquidationReward, pair;
+
       let price = p.value.div(p.amount);
+
       AggressiveLiquidatorOnPreviousPrice(
-        price,
+        p.priceData,
+        p.value,
         liquidationMargin,
         liquidationRewardPercentage,
-        p.liquidationCost,
-        p.value, // loanValue
+        p.amount,
         p.pair // pair address
       );
     });
@@ -99,9 +102,28 @@ export class PositionMonitor extends AbstractMonitor<Position> {
 
     unhealthy = await Promise.all(unhealthy.map((p) => this.updatePosition(p)));
 
-    // for (let p of unhealthy.filter((p) => {
-    //   p.amount.gt(amount(0));
-    // })) {
+    // price, liquidationMargin, liquidationReward, positionValue, pair;
+    unhealthy = unhealthy.filter((p) => {
+      // Debug data
+      console.log("lendable: ", p.lendable.toLowerCase());
+      console.log("tradable: ", p.tradable.toLowerCase());
+      console.log("proxy: ", p.proxy);
+      console.log("trader: ", p.trader.toLowerCase());
+      console.log("pair: ", p.pair.toLowerCase());
+
+      // price, collateralValue, liquidationMargin, liquidationReward, pair;
+
+      let price = p.value.div(p.amount);
+      AggressiveLiquidatorOnPreviousPrice(
+        p.priceData,
+        p.value,
+        liquidationMargin,
+        liquidationRewardPercentage,
+        p.amount,
+        p.pair // pair address
+      );
+    });
+
     for (let p of unhealthy) {
       const { path, tradableToken } = await p.getPath(this.context.db);
 
@@ -192,7 +214,7 @@ export class PositionMonitor extends AbstractMonitor<Position> {
     await Promise.all(
       positionToUpdate.map((position) => this.updatePosition(position))
     ).catch((e) =>
-      addException("-", "-", e, { message: `Failed update position run` })
+      addException("-", "-", e, { message: `additional null fetch` })
     );
 
     await this.liquidateUnhealthy().catch((e) =>
@@ -271,7 +293,7 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   async updatePosition(position: Position) {
     // console.log(position);
 
-    let data = position.priceData ? position.priceData : [];
+    let data = position.priceData.length > 1 ? position.priceData : [1];
     // let data = [0]; // TODO
 
     let price = await getPrice(
@@ -280,13 +302,16 @@ export class PositionMonitor extends AbstractMonitor<Position> {
       this.context.signer
     );
 
-    console.log(price.toString());
+    // console.log(price.toString());
+    if (parseInt(price.toString()) > 0) {
+      console.log("price:", parseInt(price.toString()));
+    }
 
     // TODO improvement : cut less than max length
-    position.priceData.push(price);
+    position.priceData.push(parseInt(price.toString()));
 
-    console.log("position.priceData");
-    console.log(position.priceData);
+    // console.log("position.priceData");
+    // console.log(position.priceData);
 
     if (position.amount.eq(bn(0)) && position.appearAt < position.updateAt) {
       position.lastUpdatedAt = Date.now();

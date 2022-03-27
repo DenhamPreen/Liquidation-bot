@@ -1,4 +1,5 @@
 import { getPairParams } from "../config.js";
+import BigNumber from "bignumber.js";
 
 // function should only run once when the bot starts running from halt
 const importInitialHistoricalPriceData = () => {
@@ -20,10 +21,30 @@ const importInitialHistoricalPriceData = () => {
   }
 };
 
-const updatePriceHistory = (priceHistory, currentBlockNumber, currentPrice) => {
-  // creating an object for the current price information
+// const updatePriceHistory = (priceHistory, currentBlockNumber, currentPrice) => {
+//   // creating an object for the current price information
+//   let currentPriceObject = {};
+
+//   priceHistory = priceHistory ? priceHistory : [];
+
+//   currentPriceObject.blockNumber = currentBlockNumber;
+//   currentPriceObject.price = currentPrice;
+//   currentPriceObject.priceMovement =
+//     (currentPrice - priceHistory.slice(-1).price) /
+//     priceHistory.slice(-1).price;
+
+//   // adding the current price information to the existing history
+//   return priceHistory.push(currentPriceObject);
+// };
+
+const getRelevantHistoricalPriceData = (priceHistory) => {
+  // adding the latest price to the history
   let currentPriceObject = {};
-  currentPriceObject.blockNumber = currentBlockNumber;
+
+  priceHistory = priceHistory ? priceHistory : [];
+
+  let currentPrice = priceHistory[priceHistory.length - 1].toNumber;
+
   currentPriceObject.price = currentPrice;
   currentPriceObject.priceMovement =
     (currentPrice - priceHistory.slice(-1).price) /
@@ -31,14 +52,11 @@ const updatePriceHistory = (priceHistory, currentBlockNumber, currentPrice) => {
 
   // adding the current price information to the existing history
   priceHistory.push(currentPriceObject);
-};
-
-const getRelevantHistoricalPriceData = (priceHistory, currentBlockNumber, currentPrice) => {
-  // adding the latest price to the history
-  priceHistory = updatePriceHistory(priceHistory, currentBlockNumber, currentPrice);
 
   // getting the relevant historical prices
-  relevantPriceHistory = priceHistory.slice(-historicalPriceWindow);
+  let { historicalPriceWindow } = getPairParams();
+
+  let relevantPriceHistory = priceHistory.slice(-historicalPriceWindow);
 
   return relevantPriceHistory;
 };
@@ -49,7 +67,8 @@ const calculateProbabilityOfLiquidationAtNextPriceUpdate = (
   priceHistory
 ) => {
   // calculating price movement threshold for liquidiation based on current price
-  priceMovementThreshold = (liquidiationPrice - currentPrice) / currentPrice;
+  let priceMovementThreshold =
+    (liquidiationPrice - currentPrice) / currentPrice;
 
   // getting relevant price history
   let relevantPriceHistory = getRelevantHistoricalPriceData(priceHistory);
@@ -59,7 +78,7 @@ const calculateProbabilityOfLiquidationAtNextPriceUpdate = (
     relevantPriceHistory.filter(
       (priceItem) => priceItem.priceMovement <= priceMovementThreshold
     ).length / relevantPriceHistory.length;
-    
+
   // computing complement of the above
   let liquidiationProbability = 1 - cumulativeDistributionFunction;
 
@@ -67,56 +86,73 @@ const calculateProbabilityOfLiquidationAtNextPriceUpdate = (
 };
 
 const calculateExpectedLiquidationPayoffAtNextPriceUpdate = (
-  price,
   liquidiationPrice,
   positionValue,
   liquidationReward,
   liquidationAttemptCost,
   priceHistory
 ) => {
+  // console.log(priceHistory);
+  priceHistory = priceHistory.map((price) => {
+    // console.log("price");
+    // console.log(price);
+    // console.log("price.toString()");
+    // console.log(price.toString);
+    // console.log("parseInt(price.toString())");
+    // console.log(parseInt(price.toString));
+    return parseInt(price);
+  });
+
   // retrieving probability of liquidiation at next price update based on relevant historical data
   let liquidationProbability =
     calculateProbabilityOfLiquidationAtNextPriceUpdate(
-      price,
+      priceHistory[0],
       liquidiationPrice,
       priceHistory
     );
-  
+
   // calculating expected gross payoff from liquidiation
-  liquidationPayoff = positionValue * liquidationReward * liquidationProbability;
+  let liquidationPayoff =
+    positionValue * liquidationReward * liquidationProbability;
 
   // calculating expected net payoff from liquidation
-  expectedPayoff =
-    liquidationPayoff - liquidationAttemptCost;
+  let expectedPayoff = liquidationPayoff - liquidationAttemptCost;
 
   return expectedPayoff;
 };
 
 export const AggressiveLiquidatorOnPreviousPrice = (
-  price,
+  priceHistory,
   collateralValue,
   liquidationMargin,
   liquidationReward,
-  // loanValue,
+  amountTokens,
   pair
 ) => {
   let { minimumRewardThreshold } = getPairParams(pair);
 
-  // calculating liquidiation price for the address 
+  //todo
+  let numberOfTokens = amountTokens;
+
+  priceHistory = priceHistory.length > 1 ? priceHistory : [1];
+
+  console.log(priceHistory);
+
+  // calculating liquidiation price for the address
   let liquidiationPrice =
-    (collateralValue / (numberOfTokens * (1 + liquidationMargin)));
+    collateralValue / (numberOfTokens * (1 + liquidationMargin));
+
+  const liquidationAttemptCost = 1;
 
   // expected payoff of the liquidation attempt
   let calculateExpectedLiquidationPayoff =
     calculateExpectedLiquidationPayoffAtNextPriceUpdate(
-      price,
       liquidiationPrice,
-      liquidationProbability,
-      positionValue,
+      collateralValue, // positionValue
       liquidationReward,
-      liquidationAttemptCost
+      liquidationAttemptCost,
+      priceHistory
     );
-
 
   let makeTrade = calculateExpectedLiquidationPayoff > minimumRewardThreshold;
 
