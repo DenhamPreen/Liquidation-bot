@@ -16,22 +16,19 @@ const calculateProbabilityOfLiquidationAtNextPriceUpdate = (
 
 export const AggressiveLiquidatorOnPreviousPrice = (
   price,
-  numberOfTokens,
-  collateralValue,
   liquidationMargin,
   liquidationReward,
-  loanValue,
+  liquidationCost,
+  positionValue,
   pair
 ) => {
   let { minimumRewardThreshold, degreeOfConfidenceThreshold } =
     getPairParams(pair);
 
-  let thresholdPassed = loanValue * liquidationReward > minimumRewardThreshold;
+  let thresholdPassed =
+    positionValue * liquidationReward > minimumRewardThreshold;
 
-  let liquidiationPrice =
-    (collateralValue / numberOfTokens) * (1 + liquidationMargin);
-
-  let priceMovementThreshold = (liquidiationPrice - price) / price;
+  let priceMovementThreshold = (liquidationCost - price) / price;
 
   // probability that next price update will be greater or equal to priceMovementThreshold
   let degreeOfConfidence = calculateProbabilityOfLiquidationAtNextPriceUpdate(
