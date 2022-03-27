@@ -12,6 +12,10 @@ Our bot is customisable per market so that users can adjust their profitability 
 
  Our system benefits the broader WOWSwap system as our bot is more reactive to larger positions as these pose a greater risk to liquidity providers if they are slow to liquidate.
 
+### Probability Math
+
+![Alt text](prob.jpg "Math")
+
 ###  files of interest
 `AggressiveLiquidator.js`
 `config.js` - Allows for customizing the parameters of the strategy to cater to liquidatoooors
