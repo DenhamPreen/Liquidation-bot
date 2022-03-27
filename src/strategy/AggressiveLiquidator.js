@@ -94,7 +94,6 @@ const calculateExpectedLiquidationPayoffAtNextPriceUpdate = (
 
 export const AggressiveLiquidatorOnPreviousPrice = (
   price,
-  numberOfTokens,
   collateralValue,
   liquidationMargin,
   liquidationReward,
@@ -117,6 +116,7 @@ export const AggressiveLiquidatorOnPreviousPrice = (
       liquidationReward,
       liquidationAttemptCost
     );
+
 
   let makeTrade = calculateExpectedLiquidationPayoff > minimumRewardThreshold;
 

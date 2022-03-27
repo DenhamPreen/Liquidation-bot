@@ -17,8 +17,8 @@ function providerFor(config: {
 }
 
 export async function sdkInit(): Promise<Context> {
-  const chainId = process.env.CHAIN_ID || "56";
-  // const chainId = process.env.CHAIN_ID || "43114";
+  // const chainId = process.env.CHAIN_ID || "56"; // bsc
+  const chainId = process.env.CHAIN_ID || "43114"; // avalanche
   const configFile = path.resolve(__dirname, `../.deploy/${chainId}.yml`);
   await fs.stat(configFile);
   const config = YAML.parse(

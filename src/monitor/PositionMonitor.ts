@@ -9,6 +9,7 @@ import { AbstractMonitor } from "./AbstractMonitor";
 import { HeightMonitor } from "./HeightMonitor";
 import { Pair, Position } from "./models";
 import { healthUpdate } from "../utils/health";
+import { getPrice } from "./AmmPriceData";
 import axios from "axios";
 import BigNumber from "bignumber.js";
 import { AggressiveLiquidatorOnPreviousPrice } from "../strategy/AggressiveLiquidator.js";
@@ -37,27 +38,19 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   }
 
   async liquidateUnhealthy() {
-    const liquidationMargin = 0.054;
-    const liquidationReward = 0.024;
-
-    // price, numberOfTokens, collateralValue, liquidationMargin, liquidationReward
-    let shouldLiquidate: boolean = AggressiveLiquidatorOnPreviousPrice(
-      1, //price
-      1, // number of tokens
-      1, // collateral value
-      liquidationMargin,
-      liquidationReward,
-      1, // loanValue
-      "0x" // pair address
+    await getPrice(
+      "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+      "0x50b7545627a5162F82A992c33b87aDc75187B218",
+      this.context.signer
     );
 
-    console.log("shouldLiquidate");
-    console.log(shouldLiquidate);
+    const liquidationMargin = 0.054;
+    const liquidationRewardPercentage = 0.024;
 
     // let unhealthy = await this.repository.find("health", { $eq: amount(0) });
 
     let unhealthy = await this.repository.find("health", {
-      $gt: amount(0), // TODO: revert to 1_000_000_000
+      $lt: amount(1_000_000_000), // TODO: revert to 1_000_000_000
     });
 
     // let unhealthy = await this.repository.find("trader", {
@@ -74,48 +67,57 @@ export class PositionMonitor extends AbstractMonitor<Position> {
     //   { price: 10, amount: 10, collateralValue: 10, value: 10, pair: "0x" },
     // ];
 
-    // unhealthy = [unhealthy[0]];
+    unhealthy = [unhealthy[0]];
 
-    // unhealthy = unhealthy.filter((p) => {
-    //   AggressiveLiquidatorOnPreviousPrice(
-    //     10, //price // TODO
-    //     p.amount, // number of tokens
-    //     10, // collateral value // TODO
-    //     liquidationMargin,
-    //     liquidationReward,
-    //     p.value, // loanValue
-    //     p.pair // pair address
-    //   );
-    //   return true;
-    // });
+    // price, liquidationMargin, liquidationReward, positionValue, pair;
+
+    unhealthy = unhealthy.filter((p) => {
+      let price = p.value.div(p.amount);
+      AggressiveLiquidatorOnPreviousPrice(
+        price,
+        liquidationMargin,
+        liquidationRewardPercentage,
+        p.liquidationCost,
+        p.value, // loanValue
+        p.pair // pair address
+      );
+
+      console.log("lendable: ", p.lendable.toLowerCase());
+      console.log("tradable: ", p.tradable.toLowerCase());
+      console.log("proxy: ", p.proxy);
+      console.log("trader: ", p.trader.toLowerCase());
+      console.log("pair: ", p.pair.toLowerCase());
+
+      return true;
+    });
 
     console.log("unhealthy.post filter");
     console.log(unhealthy.length);
 
     unhealthy = unhealthy.filter((p) => {
-      console.log("///////////////////////////////");
-      console.log("lendable: ", p.lendable);
-      console.log("tradable: ", p.tradable);
-      console.log("proxy: ", p.proxy);
-      console.log("trader: ", p.trader);
-      console.log("pair: ", p.pair);
-      console.log("updateAt: ", p.updateAt);
-      console.log("appearAt: ", p.appearAt);
-      console.log("lastUpdatedAt: ", p.lastUpdatedAt);
-      console.log("Now          : ", Date.now());
-      console.log("expirationDate: ", p.expirationDate.toString());
-      console.log("stopLossPercentage: ", p.stopLossPercentage.toString());
-      console.log("takeProfitPercentage: ", p.takeProfitPercentage.toString());
-      console.log("terminationReward: ", p.terminationReward.toString());
-      console.log("amount: ", p.amount.toString());
-      console.log("value: ", p.value.toString());
-      console.log("selfValue: ", p.selfValue.toString());
-      console.log("principalDebt: ", p.principalDebt.toString());
-      console.log("currentDebt: ", p.currentDebt.toString());
-      console.log("rate: ", p.rate.toString());
-      console.log("currentCost: ", p.currentCost.toString());
-      console.log("liquidationCost: ", p.liquidationCost.toString());
-      console.log("short: ", p.short);
+      // console.log("///////////////////////////////");
+      // console.log("lendable: ", p.lendable);
+      // console.log("tradable: ", p.tradable);
+      // console.log("proxy: ", p.proxy);
+      // console.log("trader: ", p.trader);
+      // console.log("pair: ", p.pair);
+      // console.log("updateAt: ", p.updateAt);
+      // console.log("appearAt: ", p.appearAt);
+      // console.log("lastUpdatedAt: ", p.lastUpdatedAt);
+      // console.log("Now          : ", Date.now());
+      // console.log("expirationDate: ", p.expirationDate.toString());
+      // console.log("stopLossPercentage: ", p.stopLossPercentage.toString());
+      // console.log("takeProfitPercentage: ", p.takeProfitPercentage.toString());
+      // console.log("terminationReward: ", p.terminationReward.toString());
+      // console.log("amount: ", p.amount.toString());
+      // console.log("value: ", p.value.toString());
+      // console.log("selfValue: ", p.selfValue.toString());
+      // console.log("principalDebt: ", p.principalDebt.toString());
+      // console.log("currentDebt: ", p.currentDebt.toString());
+      // console.log("rate: ", p.rate.toString());
+      // console.log("currentCost: ", p.currentCost.toString());
+      // console.log("liquidationCost: ", p.liquidationCost.toString());
+      // console.log("short: ", p.short);
       return p.amount.gt(amount(0));
     });
     unhealthy = await Promise.all(unhealthy.map((p) => this.updatePosition(p)));
@@ -138,7 +140,14 @@ export class PositionMonitor extends AbstractMonitor<Position> {
           `health: ${p.health.decimalPlaces(27).dividedBy(oneRay)}`
       );
 
-      var defaultOptions = { gasPrice: 1000000000, gasLimit: 1000000 }; // TODO: simply up gas price to bnb network
+      var defaultOptions =
+        process.env.CHAIN_ID == "56"
+          ? { gasPrice: 5000000000, gasLimit: 1000000 }
+          : {
+              maxFeePerGas: 60000000000,
+              maxPriorityFeePerGas: 3,
+              gasLimit: 1000000,
+            }; // avalanche EIP 1559 catering
 
       // await protocol.IPair__factory.connect(p.pair, this.context.signer)
       //   .liquidatePosition(
