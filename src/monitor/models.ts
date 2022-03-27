@@ -2,8 +2,8 @@ import BigNumber from "bignumber.js";
 import { Expose, Transform } from "class-transformer";
 import { DatastoreDocument, Index, Key } from "../db/document";
 import { amount, bn, ray } from "../math";
-import { defined } from '../utils';
-import { DatastoreConnection } from '../db/connection';
+import { defined } from "../utils";
+import { DatastoreConnection } from "../db/connection";
 
 function BigNumberTransform() {
   return Transform((params) => {
@@ -139,20 +139,24 @@ export class Pair extends DatastoreDocument<Pair> {
   @Index()
   updateAt!: number;
 
-  async getPath(db: DatastoreConnection): Promise<{ path: string, tradableToken: Token | undefined }> {
-    const repo = db.getRepository(Token)
-    const lendableToken = await repo.get(this.lendable)
-    const tradableToken = await repo.get(this.tradable)
+  async getPath(
+    db: DatastoreConnection
+  ): Promise<{ path: string; tradableToken: Token | undefined }> {
+    const repo = db.getRepository(Token);
+    const lendableToken = await repo.get(this.lendable);
+    const tradableToken = await repo.get(this.tradable);
     /* eslint no-undefined: "off" */
-    const proxyToken = this.proxy ? await repo.get(this.proxy) : undefined
-    const path = [lendableToken, proxyToken, tradableToken].map((token) => token?.symbol).filter(defined).join('/')
+    const proxyToken = this.proxy ? await repo.get(this.proxy) : undefined;
+    const path = [lendableToken, proxyToken, tradableToken]
+      .map((token) => token?.symbol)
+      .filter(defined)
+      .join("/");
 
-    return { path, tradableToken }
+    return { path, tradableToken };
   }
 }
 
-export class Transfer extends DatastoreDocument<Transfer> {
-}
+export class Transfer extends DatastoreDocument<Transfer> {}
 
 export class Position extends DatastoreDocument<Position> {
   @HexKey(42)
@@ -185,6 +189,9 @@ export class Position extends DatastoreDocument<Position> {
   takeProfitPercentage?: BigNumber;
   @BigNumberTransform()
   terminationReward?: BigNumber;
+
+  // @BigNumberTransform()
+  priceData?: Array<number>;
 
   @BigNumberIndex()
   @BigNumberTransform()
@@ -227,53 +234,62 @@ export class Position extends DatastoreDocument<Position> {
   static toId(short: boolean, pair: string, trader: string) {
     pair = pair.startsWith("0x") ? pair.substr(2) : pair;
     trader = trader.startsWith("0x") ? trader.substr(2) : trader;
-    const prefix = short ? "10" : '00'
+    const prefix = short ? "10" : "00";
     return [prefix, pair, trader].join("");
   }
 
-  async getPath(db: DatastoreConnection): Promise<{ path: string, tradableToken: Token | undefined }> {
-    const repo = db.getRepository(Token)
-    const lendableToken = await repo.get(this.lendable)
-    const tradableToken = await repo.get(this.tradable)
+  async getPath(
+    db: DatastoreConnection
+  ): Promise<{ path: string; tradableToken: Token | undefined }> {
+    const repo = db.getRepository(Token);
+    const lendableToken = await repo.get(this.lendable);
+    const tradableToken = await repo.get(this.tradable);
     /* eslint no-undefined: "off" */
-    const proxyToken = this.proxy ? await repo.get(this.proxy) : undefined
-    const path = [lendableToken, proxyToken, tradableToken].map((token) => token?.symbol).filter(defined).join('/')
+    const proxyToken = this.proxy ? await repo.get(this.proxy) : undefined;
+    const path = [lendableToken, proxyToken, tradableToken]
+      .map((token) => token?.symbol)
+      .filter(defined)
+      .join("/");
 
-    return { path, tradableToken }
+    return { path, tradableToken };
   }
 
   static profitPercent(pos: Position): BigNumber {
     let profitValue: BigNumber;
 
     if (pos.short) {
-      const diff = pos.currentCost.gt(pos.currentDebt) ? pos.currentCost.sub(pos.currentDebt) : bn(0)
-      const debt = pos.amount.wadMul(amount(1).sub(diff.wadDiv(pos.currentCost)))
-      profitValue = pos.amount.sub(debt).sub(pos.selfValue)
+      const diff = pos.currentCost.gt(pos.currentDebt)
+        ? pos.currentCost.sub(pos.currentDebt)
+        : bn(0);
+      const debt = pos.amount.wadMul(
+        amount(1).sub(diff.wadDiv(pos.currentCost))
+      );
+      profitValue = pos.amount.sub(debt).sub(pos.selfValue);
     } else {
-      profitValue = pos.currentCost.sub(pos.currentDebt).sub(pos.selfValue)
+      profitValue = pos.currentCost.sub(pos.currentDebt).sub(pos.selfValue);
     }
 
     // StopLoss and TakeProfit have 2 decimals (100.00)
-    return profitValue.mul(10000).div(pos.selfValue).add(10000)
+    return profitValue.mul(10000).div(pos.selfValue).add(10000);
   }
 
   static isTerminable(pos: Position): boolean {
     if (pos.selfValue.isZero()) {
-      return false
+      return false;
     }
 
-    const stopLoss = pos.stopLossPercentage || bn(0)
-    const takeProfit = pos.takeProfitPercentage || bn(0)
+    const stopLoss = pos.stopLossPercentage || bn(0);
+    const takeProfit = pos.takeProfitPercentage || bn(0);
 
-    const profit = Position.profitPercent(pos)
+    const profit = Position.profitPercent(pos);
 
     if (stopLoss.gt(0)) {
-      return profit.lte(stopLoss)
+      return profit.lte(stopLoss);
     } else if (takeProfit.gt(0)) {
-      return profit.gte(takeProfit)
+      return profit.gte(takeProfit);
     }
 
-    return false
+    return false;
   }
 }
 

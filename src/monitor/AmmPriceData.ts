@@ -21,8 +21,9 @@ export const getPrice = async (lendableAddress, tradableAddress, signer) => {
 
   let reserves = await pair.functions.getReserves();
 
-  let price = reserves["_reserve1"].mul(1000000000).div(reserves["_reserve0"]);
+  let price = reserves["_reserve1"].div(reserves["_reserve0"]).div(100000); // rnd integer scaling
 
+  console.log("price.toString()");
   console.log(price.toString());
   return price;
 };
