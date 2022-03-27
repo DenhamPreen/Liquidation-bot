@@ -71,6 +71,7 @@ export class PositionMonitor extends AbstractMonitor<Position> {
         p.amount,
         p.pair // pair address
       );
+      return true;
     });
 
     // unhealthy = unhealthy.filter((p) => {
@@ -103,26 +104,26 @@ export class PositionMonitor extends AbstractMonitor<Position> {
     unhealthy = await Promise.all(unhealthy.map((p) => this.updatePosition(p)));
 
     // price, liquidationMargin, liquidationReward, positionValue, pair;
-    unhealthy = unhealthy.filter((p) => {
-      // Debug data
-      console.log("lendable: ", p.lendable.toLowerCase());
-      console.log("tradable: ", p.tradable.toLowerCase());
-      console.log("proxy: ", p.proxy);
-      console.log("trader: ", p.trader.toLowerCase());
-      console.log("pair: ", p.pair.toLowerCase());
+    // unhealthy = unhealthy.filter((p) => {
+    //   // Debug data
+    //   console.log("lendable: ", p.lendable.toLowerCase());
+    //   console.log("tradable: ", p.tradable.toLowerCase());
+    //   console.log("proxy: ", p.proxy);
+    //   console.log("trader: ", p.trader.toLowerCase());
+    //   console.log("pair: ", p.pair.toLowerCase());
 
-      // price, collateralValue, liquidationMargin, liquidationReward, pair;
+    //   // price, collateralValue, liquidationMargin, liquidationReward, pair;
 
-      let price = p.value.div(p.amount);
-      AggressiveLiquidatorOnPreviousPrice(
-        p.priceData,
-        p.value,
-        liquidationMargin,
-        liquidationRewardPercentage,
-        p.amount,
-        p.pair // pair address
-      );
-    });
+    //   let price = p.value.div(p.amount);
+    //   AggressiveLiquidatorOnPreviousPrice(
+    //     p.priceData,
+    //     p.value,
+    //     liquidationMargin,
+    //     liquidationRewardPercentage,
+    //     p.amount,
+    //     p.pair // pair address
+    //   );
+    // });
 
     for (let p of unhealthy) {
       const { path, tradableToken } = await p.getPath(this.context.db);
@@ -148,24 +149,24 @@ export class PositionMonitor extends AbstractMonitor<Position> {
               gasLimit: 1000000,
             }; // avalanche EIP 1559 catering
 
-      // await protocol.IPair__factory.connect(p.pair, this.context.signer)
-      //   .liquidatePosition(
-      //     p.trader,
-      //     this.context.signer.address,
-      //     defaultOptions
-      //   )
-      //   .then((tx) => tx.wait())
-      //   .catch((e) =>
-      //     addException("pair", p.pair, e, {
-      //       message: `Failed liquidate position of ${path} ${p.trader} ${e.message}`,
-      //     })
-      //   )
-      //   .then((v) => {
-      //     if (defined(v)) {
-      //       // If call was successful
-      //       this.context.metrics.increment("liquidations", ["successful"]);
-      //     }
-      //   });
+      await protocol.IPair__factory.connect(p.pair, this.context.signer)
+        .liquidatePosition(
+          p.trader,
+          this.context.signer.address,
+          defaultOptions
+        )
+        .then((tx) => tx.wait())
+        .catch((e) =>
+          addException("pair", p.pair, e, {
+            message: `Failed liquidate position of ${path} ${p.trader} ${e.message}`,
+          })
+        )
+        .then((v) => {
+          if (defined(v)) {
+            // If call was successful
+            this.context.metrics.increment("liquidations", ["successful"]);
+          }
+        });
     }
   }
 

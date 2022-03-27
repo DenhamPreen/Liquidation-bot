@@ -136,7 +136,7 @@ export const AggressiveLiquidatorOnPreviousPrice = (
 
   priceHistory = priceHistory.length > 1 ? priceHistory : [1];
 
-  console.log(priceHistory);
+  // console.log(priceHistory);
 
   // calculating liquidiation price for the address
   let liquidiationPrice =

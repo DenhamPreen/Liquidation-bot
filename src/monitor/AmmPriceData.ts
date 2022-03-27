@@ -31,7 +31,7 @@ export const getPrice = async (lendableAddress, tradableAddress, signer) => {
     reserves["_reserve0"].sub(reserves["_reserve1"]) > bn(0)
       ? reserves["_reserve1"]
       : reserves["_reserve0"];
-  let price = reserves["_reserve1"].div(reserves["_reserve0"]).div(1000); // rnd integer scaling
+  let price = numer.div(denom).div(1000); // rnd integer scaling
 
   //   console.log("price.toString()");
   //   console.log(price.toString());
