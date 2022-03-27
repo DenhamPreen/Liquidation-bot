@@ -104,7 +104,7 @@ export const AggressiveLiquidatorOnPreviousPrice = (
 
   // calculating liquidiation price for the address 
   let liquidiationPrice =
-    (collateralValue / numberOfTokens) * (1 + liquidationMargin);
+    (collateralValue / (numberOfTokens * (1 + liquidationMargin)));
 
   // expected payoff of the liquidation attempt
   let calculateExpectedLiquidationPayoff =
