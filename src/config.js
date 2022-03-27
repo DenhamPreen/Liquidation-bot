@@ -1,12 +1,12 @@
 const defaultPairParams = {
   minimumRewardThreshold: 10,
-  degreeOfConfidenceThreshold: 0.9,
+  historicalPriceWindow: 20
 };
 
 const pairParams = {
   "0x": {
     minimumRewardThreshold: 10,
-    degreeOfConfidenceThreshold: 0.01,
+    historicalPriceWindow: 20
   },
 };
 
