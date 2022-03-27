@@ -9,6 +9,7 @@ import { AbstractMonitor } from "./AbstractMonitor";
 import { HeightMonitor } from "./HeightMonitor";
 import { Pair, Position } from "./models";
 import { healthUpdate } from "../utils/health";
+import { getPrice } from "./AmmPriceData";
 import axios from "axios";
 import BigNumber from "bignumber.js";
 import { AggressiveLiquidatorOnPreviousPrice } from "../strategy/AggressiveLiquidator.js";
@@ -37,22 +38,14 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   }
 
   async liquidateUnhealthy() {
+    await getPrice(
+      "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+      "0x50b7545627a5162F82A992c33b87aDc75187B218",
+      this.context.signer
+    );
+
     const liquidationMargin = 0.054;
     const liquidationRewardPercentage = 0.024;
-
-    // price, numberOfTokens, collateralValue, liquidationMargin, liquidationReward
-    // let shouldLiquidate: boolean = AggressiveLiquidatorOnPreviousPrice(
-    //   1, //price
-    //   1, // number of tokens
-    //   1, // collateral value
-    //   liquidationMargin,
-    //   liquidationReward,
-    //   1, // loanValue
-    //   "0x" // pair address
-    // );
-
-    // console.log("shouldLiquidate");
-    // console.log(shouldLiquidate);
 
     // let unhealthy = await this.repository.find("health", { $eq: amount(0) });
 
@@ -77,23 +70,6 @@ export class PositionMonitor extends AbstractMonitor<Position> {
     unhealthy = [unhealthy[0]];
 
     // price, liquidationMargin, liquidationReward, positionValue, pair;
-
-    // axios
-    //   .get<{
-    //     data: { items: Array<{ address: string }> };
-    //   }>(
-    //     `https://api.covalenthq.com/v1/${this.context.chainId}/tokens/${pair.address}/token_holders/`,
-    //     {
-    //       params: {
-    //         key: this.context.covalentApiKey,
-    //       },
-    //     }
-    //   )
-    //   .then((r) => {
-    //     console.log("r.data.data.items");
-    //     console.log(r.data.data.items);
-    //     return r.data.data.items;
-    //   });
 
     unhealthy = unhealthy.filter((p) => {
       let price = p.value.div(p.amount);
@@ -173,24 +149,24 @@ export class PositionMonitor extends AbstractMonitor<Position> {
               gasLimit: 1000000,
             }; // avalanche EIP 1559 catering
 
-      await protocol.IPair__factory.connect(p.pair, this.context.signer)
-        .liquidatePosition(
-          p.trader,
-          this.context.signer.address,
-          defaultOptions
-        )
-        .then((tx) => tx.wait())
-        .catch((e) =>
-          addException("pair", p.pair, e, {
-            message: `Failed liquidate position of ${path} ${p.trader} ${e.message}`,
-          })
-        )
-        .then((v) => {
-          if (defined(v)) {
-            // If call was successful
-            this.context.metrics.increment("liquidations", ["successful"]);
-          }
-        });
+      // await protocol.IPair__factory.connect(p.pair, this.context.signer)
+      //   .liquidatePosition(
+      //     p.trader,
+      //     this.context.signer.address,
+      //     defaultOptions
+      //   )
+      //   .then((tx) => tx.wait())
+      //   .catch((e) =>
+      //     addException("pair", p.pair, e, {
+      //       message: `Failed liquidate position of ${path} ${p.trader} ${e.message}`,
+      //     })
+      //   )
+      //   .then((v) => {
+      //     if (defined(v)) {
+      //       // If call was successful
+      //       this.context.metrics.increment("liquidations", ["successful"]);
+      //     }
+      //   });
     }
   }
 
