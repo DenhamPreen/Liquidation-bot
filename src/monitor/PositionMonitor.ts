@@ -38,40 +38,27 @@ export class PositionMonitor extends AbstractMonitor<Position> {
   }
 
   async liquidateUnhealthy() {
-    await getPrice(
-      "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
-      "0x50b7545627a5162F82A992c33b87aDc75187B218",
-      this.context.signer
-    );
-
     const liquidationMargin = 0.054;
     const liquidationRewardPercentage = 0.024;
 
-    // let unhealthy = await this.repository.find("health", { $eq: amount(0) });
-
+    // Smaller observable set optimization
     let unhealthy = await this.repository.find("health", {
-      $lt: amount(1_000_000_000), // TODO: revert to 1_000_000_000
+      $lt: amount(1_000_000_000),
     });
 
-    // let unhealthy = await this.repository.find("trader", {
-    //   $eq: "0xea53f634bd4bb113ee55ea679f7825d2a0dfd4a8", // TODO: revert to 1_000_000_000
-    // });
-
-    console.log("/////////////");
-    console.log("unhealthy.length");
-    console.log(unhealthy.length);
-    // console.log(unhealthy);
-
-    // for demo
-    // unhealthy = [
-    //   { price: 10, amount: 10, collateralValue: 10, value: 10, pair: "0x" },
-    // ];
+    console.log("Amount of unhealthy subset:", unhealthy.length);
 
     unhealthy = [unhealthy[0]];
 
     // price, liquidationMargin, liquidationReward, positionValue, pair;
-
     unhealthy = unhealthy.filter((p) => {
+      // Debug data
+      console.log("lendable: ", p.lendable.toLowerCase());
+      console.log("tradable: ", p.tradable.toLowerCase());
+      console.log("proxy: ", p.proxy);
+      console.log("trader: ", p.trader.toLowerCase());
+      console.log("pair: ", p.pair.toLowerCase());
+
       let price = p.value.div(p.amount);
       AggressiveLiquidatorOnPreviousPrice(
         price,
@@ -81,45 +68,35 @@ export class PositionMonitor extends AbstractMonitor<Position> {
         p.value, // loanValue
         p.pair // pair address
       );
-
-      console.log("lendable: ", p.lendable.toLowerCase());
-      console.log("tradable: ", p.tradable.toLowerCase());
-      console.log("proxy: ", p.proxy);
-      console.log("trader: ", p.trader.toLowerCase());
-      console.log("pair: ", p.pair.toLowerCase());
-
-      return true;
     });
 
-    console.log("unhealthy.post filter");
-    console.log(unhealthy.length);
+    // unhealthy = unhealthy.filter((p) => {
+    //   // console.log("/////////Debug logs/////////////");
+    //   // console.log("lendable: ", p.lendable);
+    //   // console.log("tradable: ", p.tradable);
+    //   // console.log("proxy: ", p.proxy);
+    //   // console.log("trader: ", p.trader);
+    //   // console.log("pair: ", p.pair);
+    //   // console.log("updateAt: ", p.updateAt);
+    //   // console.log("appearAt: ", p.appearAt);
+    //   // console.log("lastUpdatedAt: ", p.lastUpdatedAt);
+    //   // console.log("Now          : ", Date.now());
+    //   // console.log("expirationDate: ", p.expirationDate.toString());
+    //   // console.log("stopLossPercentage: ", p.stopLossPercentage.toString());
+    //   // console.log("takeProfitPercentage: ", p.takeProfitPercentage.toString());
+    //   // console.log("terminationReward: ", p.terminationReward.toString());
+    //   // console.log("amount: ", p.amount.toString());
+    //   // console.log("value: ", p.value.toString());
+    //   // console.log("selfValue: ", p.selfValue.toString());
+    //   // console.log("principalDebt: ", p.principalDebt.toString());
+    //   // console.log("currentDebt: ", p.currentDebt.toString());
+    //   // console.log("rate: ", p.rate.toString());
+    //   // console.log("currentCost: ", p.currentCost.toString());
+    //   // console.log("liquidationCost: ", p.liquidationCost.toString());
+    //   // console.log("short: ", p.short);
+    //   return p.amount.gt(amount(0));
+    // });
 
-    unhealthy = unhealthy.filter((p) => {
-      // console.log("///////////////////////////////");
-      // console.log("lendable: ", p.lendable);
-      // console.log("tradable: ", p.tradable);
-      // console.log("proxy: ", p.proxy);
-      // console.log("trader: ", p.trader);
-      // console.log("pair: ", p.pair);
-      // console.log("updateAt: ", p.updateAt);
-      // console.log("appearAt: ", p.appearAt);
-      // console.log("lastUpdatedAt: ", p.lastUpdatedAt);
-      // console.log("Now          : ", Date.now());
-      // console.log("expirationDate: ", p.expirationDate.toString());
-      // console.log("stopLossPercentage: ", p.stopLossPercentage.toString());
-      // console.log("takeProfitPercentage: ", p.takeProfitPercentage.toString());
-      // console.log("terminationReward: ", p.terminationReward.toString());
-      // console.log("amount: ", p.amount.toString());
-      // console.log("value: ", p.value.toString());
-      // console.log("selfValue: ", p.selfValue.toString());
-      // console.log("principalDebt: ", p.principalDebt.toString());
-      // console.log("currentDebt: ", p.currentDebt.toString());
-      // console.log("rate: ", p.rate.toString());
-      // console.log("currentCost: ", p.currentCost.toString());
-      // console.log("liquidationCost: ", p.liquidationCost.toString());
-      // console.log("short: ", p.short);
-      return p.amount.gt(amount(0));
-    });
     unhealthy = await Promise.all(unhealthy.map((p) => this.updatePosition(p)));
 
     // for (let p of unhealthy.filter((p) => {
@@ -293,6 +270,23 @@ export class PositionMonitor extends AbstractMonitor<Position> {
 
   async updatePosition(position: Position) {
     // console.log(position);
+
+    let data = position.priceData ? position.priceData : [];
+    // let data = [0]; // TODO
+
+    let price = await getPrice(
+      position.lendable,
+      position.tradable,
+      this.context.signer
+    );
+
+    console.log(price.toString());
+
+    // TODO improvement : cut less than max length
+    position.priceData.push(price);
+
+    console.log("position.priceData");
+    console.log(position.priceData);
 
     if (position.amount.eq(bn(0)) && position.appearAt < position.updateAt) {
       position.lastUpdatedAt = Date.now();
