@@ -1,3 +1,5 @@
+# Team Liquidatooooors 🏋
+Team: Denham, James & Woo 
 # Statistical Probabilistic Liquidation BOT Executor
 
 We have built a liquidation bot for WOWSwap, that improves the current version in several ways while remaining lightweight for many users to run.
